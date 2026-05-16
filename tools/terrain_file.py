@@ -37,8 +37,10 @@ log = logging.getLogger(__name__)
 _MAGIC   = b"TERR"
 _VERSION = 2
 
-TERRAIN_LAYER_NAME = "felsted_grass"
-TERRAIN_LAYER_TEX  = "levels/felsted/art/terrains/felsted_grass/diffuse.png"
+TERRAIN_LAYER_NAME     = "felsted_grass"
+TERRAIN_LAYER_TEX      = "levels/felsted/art/terrains/felsted_grass/diffuse.png"
+SATELLITE_LAYER_NAME   = "felsted_satellite"
+SATELLITE_LAYER_TEX    = "levels/felsted/art/terrain/satellite/satellite.png"
 
 
 def _norm_to_uint16(elevation: np.ndarray, max_h: float) -> np.ndarray:
@@ -48,7 +50,8 @@ def _norm_to_uint16(elevation: np.ndarray, max_h: float) -> np.ndarray:
 
 def write_ter(path: Path | str,
               elevation: np.ndarray,
-              max_height: float = MAX_TERRAIN_HEIGHT) -> None:
+              max_height: float = MAX_TERRAIN_HEIGHT,
+              use_satellite: bool = False) -> None:
     """
     Write a .ter file from an elevation array.
 
@@ -68,6 +71,9 @@ def write_ter(path: Path | str,
     flags    = np.zeros((GRID_SIZE, GRID_SIZE), dtype=np.uint8)
     coverage = np.full((GRID_SIZE, GRID_SIZE), 255, dtype=np.uint8)
 
+    layer_name = SATELLITE_LAYER_NAME if use_satellite else TERRAIN_LAYER_NAME
+    layer_tex  = SATELLITE_LAYER_TEX  if use_satellite else TERRAIN_LAYER_TEX
+
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("wb") as f:
         f.write(_MAGIC)
@@ -78,8 +84,8 @@ def write_ter(path: Path | str,
         f.write(heights.tobytes())
         f.write(flags.tobytes())
 
-        f.write(TERRAIN_LAYER_NAME.encode() + b"\x00")
-        f.write(TERRAIN_LAYER_TEX.encode()  + b"\x00")
+        f.write(layer_name.encode() + b"\x00")
+        f.write(layer_tex.encode()  + b"\x00")
         f.write(coverage.tobytes())
 
     size_mb = path.stat().st_size / 1_048_576

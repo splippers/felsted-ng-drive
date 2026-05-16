@@ -1,4 +1,4 @@
-"""Tests for coordinate projection utilities."""
+"""Tests for coordinate projection utilities — updated for v3.0 (2 m terrain)."""
 
 import math
 import pytest
@@ -31,16 +31,17 @@ class TestGpsToWorld:
         assert abs(lon2 - lon) < 1e-7
 
     def test_scale_1km_north(self):
-        """1° latitude ≈ 111 139 m, so 0.009° ≈ 1 km."""
+        """0.009° latitude ≈ 1 km north."""
         _, y = gps_to_world(CENTER_LAT + 0.009, CENTER_LON)
         assert 950 < y < 1050
 
+    def test_scale_1km_east(self):
+        """East scale at 51.86°N: 1 km ≈ 0.01457°."""
+        x, _ = gps_to_world(CENTER_LAT, CENTER_LON + 0.01457)
+        assert 950 < x < 1050
+
     def test_world_fits_inside_bbox(self):
-        """
-        The BBOX is the OSM/elevation query region and must be larger than the
-        world so that the terrain has data everywhere.  Check that the world
-        corners all fall inside BBOX.
-        """
+        """All four world corners must lie inside BBOX."""
         from tools.constants import BBOX
         s, w, n, e = BBOX
         for wx, wy in [
@@ -48,8 +49,31 @@ class TestGpsToWorld:
             ( WORLD_HALF, -WORLD_HALF), ( WORLD_HALF, WORLD_HALF),
         ]:
             lat, lon = world_to_gps(wx, wy)
-            assert s <= lat <= n, f"World corner lat {lat:.5f} outside BBOX lat [{s},{n}]"
-            assert w <= lon <= e, f"World corner lon {lon:.5f} outside BBOX lon [{w},{e}]"
+            assert s <= lat <= n
+            assert w <= lon <= e
+
+    def test_felsted_school_within_world(self):
+        """The school is centred on the world — must be well inside ±1024 m."""
+        x, y = gps_to_world(51.8588, 0.4371)
+        assert abs(x) < 50
+        assert abs(y) < 50
+
+
+class TestTerrainResolution:
+    def test_block_size_is_1024(self):
+        assert BLOCK_SIZE == 1024
+
+    def test_square_size_is_2m(self):
+        assert SQUARE_SIZE == 2.0
+
+    def test_world_is_2048m(self):
+        assert BLOCK_SIZE * SQUARE_SIZE == 2048.0
+
+    def test_world_half_is_1024(self):
+        assert WORLD_HALF == 1024.0
+
+    def test_grid_size_is_1025(self):
+        assert GRID_SIZE == BLOCK_SIZE + 1 == 1025
 
 
 class TestWorldToHm:
@@ -62,12 +86,12 @@ class TestWorldToHm:
     def test_north_is_low_row(self):
         r_n, _ = world_to_hm(0,  500)
         r_s, _ = world_to_hm(0, -500)
-        assert r_n < r_s, "North should map to lower row index"
+        assert r_n < r_s
 
     def test_east_is_high_col(self):
         _, c_e = world_to_hm( 500, 0)
         _, c_w = world_to_hm(-500, 0)
-        assert c_e > c_w, "East should map to higher col index"
+        assert c_e > c_w
 
     def test_clamped_within_grid(self):
         for wx, wy in [(-9999, 0), (9999, 0), (0, -9999), (0, 9999)]:
@@ -75,8 +99,17 @@ class TestWorldToHm:
             assert 0 <= r <= BLOCK_SIZE
             assert 0 <= c <= BLOCK_SIZE
 
-    def test_grid_size_constant(self):
-        assert GRID_SIZE == BLOCK_SIZE + 1
+    def test_resolution_2m_per_pixel(self):
+        """Two points 2 m apart should map to adjacent grid cells."""
+        r0, c0 = world_to_hm(0, 0)
+        r1, c1 = world_to_hm(SQUARE_SIZE, 0)   # 2 m east
+        assert c1 == c0 + 1
+
+    def test_1km_span(self):
+        """1 000 m east should shift column by ~500 cells."""
+        _, c0 = world_to_hm(0, 0)
+        _, c1 = world_to_hm(1000, 0)
+        assert abs((c1 - c0) - 500) <= 1
 
 
 class TestHmRoundtrip:

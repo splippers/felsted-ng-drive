@@ -1,17 +1,19 @@
 """
-Assemble the BeamNG main.level.json scene graph from terrain and road data.
+Assemble the BeamNG main.level.json scene graph — v3.0.
 
-BeamNG uses a Torque3D-derived JSON level format.  The top-level object is a
-SimGroup called MissionGroup; all scene objects are nested inside it.  All
-numeric properties are represented as JSON numbers (not quoted strings).
-
-Key scene objects generated:
-  • LevelInfo          – sky, fog, ambient settings
-  • TerrainBlock       – references the .ter file
-  • Sun                – directional light + shadows
-  • SimGroup "Spawn"   – SpawnSphere nodes (vehicle start positions)
-  • SimGroup "Roads"   – DecalRoad objects derived from OSM / static network
-  • SimGroup "Props"   – placeholder for future TSStatic buildings / trees
+New in v3.0
+───────────
+• Real OSM road geometry (all highways in the bounding box)
+• Building markers + footprint outlines
+• 3D extruded building meshes (.dae) from buildings3d
+• River Chelmer + Stebbing Brook water features + OSM stream network
+• Historical railway trackbed (Witham–Dunmow branch, closed 1953)
+• Sports pitch outlines
+• Forest / woodland groups
+• 8 vehicle spawn points
+• UK-latitude sun settings (51.86°N)
+• ScatterSky with English overcast parameters
+• Increased terrain LOD settings for 2 m resolution
 """
 
 from __future__ import annotations
@@ -22,22 +24,16 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from tools.constants import (
-    MAP_NAME, MAP_TITLE,
-    BLOCK_SIZE, SQUARE_SIZE, CAMPUS_ELEV,
-)
+from tools.constants import MAP_NAME, MAP_VERSION, SQUARE_SIZE
 
 log = logging.getLogger(__name__)
 
-# ── Deterministic UUID helper ──────────────────────────────────────────────────
 _NS = uuid.UUID("6ba7b810-9dad-11d1-80b4-00c04fd430c8")
 
 
 def _uid(name: str) -> str:
     return str(uuid.uuid5(_NS, f"felsted.{name}"))
 
-
-# ── Scene-object constructors ──────────────────────────────────────────────────
 
 def _obj(cls: str, name: str, **props) -> dict[str, Any]:
     return {"class": cls, "name": name, "persistentId": _uid(name), **props}
@@ -49,142 +45,170 @@ def _group(name: str, *children) -> dict[str, Any]:
     return o
 
 
+# ── Scene primitives ──────────────────────────────────────────────────────────
+
 def _level_info() -> dict:
     return _obj(
         "LevelInfo", "LevelInfo",
-        visibleDistance=1500,
-        fogColor=[0.6, 0.65, 0.7, 1.0],
-        fogDensity=0.0,
-        fogDensityOffset=700.0,
-        canvasClearColor=[0, 0, 0, 255],
-        ambientLightColor=[0.15, 0.15, 0.20, 1.0],
+        visibleDistance      = 2000,
+        fogColor             = [0.65, 0.68, 0.72, 1.0],
+        fogDensity           = 0.0,
+        fogDensityOffset     = 900.0,
+        canvasClearColor     = [0, 0, 0, 255],
+        ambientLightColor    = [0.18, 0.19, 0.22, 1.0],
+        advancedLightingModel= True,
     )
 
 
 def _terrain_block() -> dict:
     return _obj(
         "TerrainBlock", "Terrain",
-        position=[0, 0, 0],
-        rotation=[1, 0, 0, 0],
-        scale=[1, 1, 1],
-        squareSize=SQUARE_SIZE,
-        terrainFile=f"levels/{MAP_NAME}/terrainGrid/{MAP_NAME}.ter",
-        baseTexSize=256,
-        overrideGroundModel=False,
-        physicsProxyType="Trimesh",
-        castDynamicShadows=False,
-        maxDetailDistance=200,
-        screenError=16,
+        position            = [0, 0, 0],
+        rotation            = [1, 0, 0, 0],
+        scale               = [1, 1, 1],
+        squareSize          = SQUARE_SIZE,
+        terrainFile         = f"levels/{MAP_NAME}/terrainGrid/{MAP_NAME}.ter",
+        baseTexSize         = 512,           # higher for 2 m terrain
+        overrideGroundModel = False,
+        physicsProxyType    = "Trimesh",
+        castDynamicShadows  = False,
+        maxDetailDistance   = 300,
+        screenError         = 8,             # finer LOD splits for 2 m terrain
     )
 
 
 def _sun() -> dict:
+    # UK summer afternoon: sun bearing ~214° (SSW), elevation ~45°
     return _obj(
         "Sun", "TheSun",
-        azimuth=214,        # SSW sun angle, typical UK summer afternoon
-        elevation=45,
-        color=[0.95, 0.92, 0.88, 1.0],
-        ambient=[0.16, 0.17, 0.20, 1.0],
-        shadowDistance=500,
-        shadowSoftness=0.15,
-        numSplits=4,
-        logWeight=0.91,
-        attenuationRatio=[0.0, 1.0, 1.0],
+        azimuth          = 214,
+        elevation        = 42,
+        color            = [0.93, 0.91, 0.86, 1.0],
+        ambient          = [0.20, 0.21, 0.25, 1.0],
+        shadowDistance   = 600,
+        shadowSoftness   = 0.20,
+        numSplits        = 4,
+        logWeight        = 0.91,
+        attenuationRatio = [0.0, 1.0, 1.0],
     )
 
 
 def _scatter_sky() -> dict:
     return _obj(
         "ScatterSky", "ScatterSky",
-        skyBrightness=25,
-        sunSize=1.0,
-        colorizeAmount=0.2,
-        colorize=[0.6, 0.8, 1.0],
-        rayleighScattering=0.0035,
-        mieScattering=0.0045,
-        exposure=1.0,
-        nightColor=[0.02, 0.02, 0.08, 1.0],
-        windSpeed=1.0,
+        skyBrightness     = 22,
+        sunSize           = 1.0,
+        colorizeAmount    = 0.15,
+        colorize          = [0.65, 0.80, 1.0],
+        rayleighScattering= 0.0040,
+        mieScattering     = 0.0055,     # slight haze typical of Essex
+        exposure          = 1.0,
+        nightColor        = [0.02, 0.02, 0.08, 1.0],
+        windSpeed         = 1.5,
     )
 
 
-def _spawn_sphere(name: str, x: float, y: float, z: float,
-                  yaw_deg: float = 0.0, radius: float = 3.0) -> dict:
-    """
-    yaw_deg: clockwise from north (0° = north, 90° = east).
-    Converts to BeamNG's axis-angle quaternion [qx, qy, qz, qw].
-    """
+def _spawn(name: str, x: float, y: float, z: float,
+           yaw_deg: float = 0.0) -> dict:
     import math
     half = math.radians(yaw_deg) / 2
-    qz   = math.sin(half)
-    qw   = math.cos(half)
     return _obj(
         "SpawnSphere", name,
-        position=[round(x, 2), round(y, 2), round(z + 0.5, 2)],
-        rotation=[0.0, 0.0, round(qz, 4), round(qw, 4)],
-        radius=radius,
-        sphereWeight=100,
-        indoorWeight=0,
-        outdoorWeight=100,
+        position     = [round(x,2), round(y,2), round(z+0.5,2)],
+        rotation     = [0.0, 0.0, round(math.sin(half),4), round(math.cos(half),4)],
+        radius       = 3.0,
+        sphereWeight = 100,
+        indoorWeight = 0,
+        outdoorWeight= 100,
     )
 
 
 def _decal_road(road: dict) -> dict:
-    """Convert a road dict (from osm_roads) into a DecalRoad scene object."""
     nodes = [
-        [round(n[0], 2), round(n[1], 2), round(n[2], 2), road["width"]]
+        [round(n[0],2), round(n[1],2), round(n[2],2), road["width"]]
         for n in road["nodes"]
     ]
     return _obj(
         "DecalRoad", road["name"],
-        material=road["material"],
-        renderPriority=10,
-        textureLength=5,
-        drivability=1,
-        improvedSpline=True,
-        breakAngle=3,
-        depthBias=-0.001,
-        nodes=nodes,
+        material        = road["material"],
+        renderPriority  = 10,
+        textureLength   = 5,
+        drivability     = 1,
+        improvedSpline  = True,
+        breakAngle      = 3,
+        depthBias       = -0.001,
+        nodes           = nodes,
     )
 
 
-# ── Spawn points (fixed landmarks) ────────────────────────────────────────────
-# Positions derived from campus map and research data.
+# ── Spawn points (8 locations) ────────────────────────────────────────────────
 _SPAWN_POINTS = [
-    # name, world X, world Y, elev, yaw (° CW from north)
-    ("spawn_main_entrance",  -248, -200, 72.5,  90),   # by Stebbing Rd gate, facing east
-    ("spawn_car_park",       -296, -395, 72.5, 180),   # car park, facing south
-    ("spawn_campus_centre",     0,    0, 76.5,   0),   # main building forecourt, north
-    ("spawn_sports_fields",   450,  490, 73.5, 270),   # sports pitches, facing west
+    # (name, world_X, world_Y, elev, yaw_deg_cw_from_north)
+    ("spawn_main_entrance",    -248, -200, 72.5,  90),  # Stebbing Rd gate, →east
+    ("spawn_car_park",         -296, -395, 72.5, 180),  # south car park
+    ("spawn_campus_centre",       0,    0, 76.5,   0),  # main building forecourt
+    ("spawn_sports_fields",     450,  490, 73.5, 270),  # NE pitches, →west
+    ("spawn_chapel_approach",  -140, -180, 74.0,  90),  # chapel drive, →east
+    ("spawn_north_road",       -238,  800, 81.0, 180),  # Stebbing Rd north, →south
+    ("spawn_braintree_east",    900,  -45, 74.5, 270),  # B1008 approach, →west
+    ("spawn_sports_centre",     200,  110, 76.0, 180),  # sports centre, →south
 ]
 
 
 # ── Public API ─────────────────────────────────────────────────────────────────
 
-def build_level(roads: list[dict], out_path: Path | str) -> None:
+def build_level(roads:            list[dict],
+                buildings:        tuple[list[dict], list[dict]] | None = None,
+                water:            list[dict] | None = None,
+                vegetation:       list[dict] | None = None,
+                building_meshes:  list[dict] | None = None,
+                railway:          list[dict] | None = None,
+                out_path:         Path | str = None) -> None:
     """
     Write the main.level.json scene graph.
 
     Parameters
     ----------
-    roads    : list of road dicts from osm_roads.build_roads()
-    out_path : destination file path
+    roads           : road dicts from osm_roads.build_roads()
+    buildings       : (markers, footprints) from buildings.build_building_objects()
+    water           : objects from water.build_water_objects()
+    vegetation      : objects from vegetation.build_vegetation_objects()
+    building_meshes : 3D TSStatic objects from buildings3d.build_building_meshes()
+    railway         : historical railway objects from railway.build_railway_objects()
+    out_path        : destination file
     """
+    if out_path is None:
+        from tools.constants import LEVELS_DIR
+        out_path = LEVELS_DIR / "main.level.json"
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
-    spawn_group = _group(
-        "Spawn",
-        *[_spawn_sphere(name, x, y, z, yaw)
-          for name, x, y, z, yaw in _SPAWN_POINTS],
-    )
+    # Roads
+    roads_group = _group("Roads", *[_decal_road(r) for r in roads])
 
-    roads_group = _group(
-        "Roads",
-        *[_decal_road(r) for r in roads],
-    )
+    # Buildings — markers/footprints from osm buildings + 3D meshes from buildings3d
+    bld_markers:    list[dict] = []
+    bld_footprints: list[dict] = []
+    if buildings:
+        bld_markers, bld_footprints = buildings
+    bld_3d = list(building_meshes or [])
+    bld_group = _group("Buildings",
+                        *bld_markers,
+                        *bld_3d,
+                        _group("Footprints", *bld_footprints))
 
-    props_group = _group("Props")   # placeholder for TSStatic buildings
+    # Water
+    water_group = _group("Water", *(water or []))
+
+    # Vegetation
+    veg_group = _group("Vegetation", *(vegetation or []))
+
+    # Historical railway
+    rail_group = _group("Railway", *(railway or []))
+
+    # Spawn
+    spawn_group = _group("Spawn",
+                          *[_spawn(*s) for s in _SPAWN_POINTS])
 
     mission_group = _group(
         "MissionGroup",
@@ -194,11 +218,23 @@ def build_level(roads: list[dict], out_path: Path | str) -> None:
         _terrain_block(),
         spawn_group,
         roads_group,
-        props_group,
+        bld_group,
+        water_group,
+        veg_group,
+        rail_group,
     )
 
     with out_path.open("w", encoding="utf-8") as f:
         json.dump(mission_group, f, indent=2)
 
-    log.info("Wrote %s (%d roads, %d spawn points)",
-             out_path, len(roads), len(_SPAWN_POINTS))
+    road_count  = len(roads)
+    bld_count   = len(bld_markers) + len(bld_3d)
+    water_count = len(water or [])
+    veg_count   = len(vegetation or [])
+    rail_count  = len(railway or [])
+    log.info(
+        "Level written: %d roads, %d buildings, %d water, %d vegetation, "
+        "%d railway, %d spawns → %s",
+        road_count, bld_count, water_count, veg_count, rail_count,
+        len(_SPAWN_POINTS), out_path,
+    )

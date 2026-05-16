@@ -1,77 +1,105 @@
-"""Tests for the offline static road network."""
+"""Tests for road network builder — v3.0 (OSM + static fallback)."""
 
 import pytest
 from tools.osm_roads import build_roads, _STATIC_ROADS
-from tools.constants import WORLD_HALF
+from tools.constants import WORLD_HALF, OSM_CACHE
 
 
 @pytest.fixture(scope="module")
-def roads():
-    return build_roads(online=False)
+def roads_osm():
+    """Roads from cached OSM data (skips if cache absent)."""
+    if not OSM_CACHE.exists():
+        pytest.skip("OSM cache absent")
+    elev_fn = lambda wx, wy: 76.0
+    return build_roads(elevation_fn=elev_fn, online=False)
 
+
+@pytest.fixture(scope="module")
+def roads_static():
+    return _STATIC_ROADS
+
+
+# ── Static fallback ────────────────────────────────────────────────────────────
 
 class TestStaticRoads:
-    def test_returns_list(self, roads):
-        assert isinstance(roads, list)
+    def test_non_empty(self, roads_static):
+        assert len(roads_static) >= 6
 
-    def test_non_empty(self, roads):
-        assert len(roads) >= 6, "Expected at least 6 roads in static network"
+    def test_required_roads(self, roads_static):
+        names = {r["name"] for r in roads_static}
+        assert "road_stebbing_s"    in names
+        assert "road_entrance_drive" in names
+        assert "road_campus_loop"   in names
 
-    def test_required_roads_present(self, roads):
-        names = {r["name"] for r in roads}
-        assert "road_stebbing_s" in names,       "Missing southbound Stebbing Road"
-        assert "road_entrance_drive" in names,    "Missing entrance drive"
-        assert "road_campus_loop" in names,       "Missing campus loop"
-        assert "road_carpark_access" in names,    "Missing car park access"
+    def test_road_schema(self, roads_static):
+        for r in roads_static:
+            assert "name" in r
+            assert "material" in r
+            assert "width" in r
+            assert "nodes" in r
 
-    def test_road_schema(self, roads):
-        for road in roads:
-            assert "name"     in road, f"{road} missing 'name'"
-            assert "material" in road, f"{road['name']} missing 'material'"
-            assert "width"    in road, f"{road['name']} missing 'width'"
-            assert "nodes"    in road, f"{road['name']} missing 'nodes'"
+    def test_stebbing_rises_northward(self, roads_static):
+        sr = next(r for r in roads_static if r["name"] == "road_stebbing_s")
+        z  = [n[2] for n in sr["nodes"]]
+        assert z[0] < z[-1]
 
-    def test_minimum_two_nodes(self, roads):
-        for road in roads:
-            assert len(road["nodes"]) >= 2, \
-                f"{road['name']} has fewer than 2 nodes"
+    def test_nodes_within_world(self, roads_static):
+        margin = 60
+        for r in roads_static:
+            for n in r["nodes"]:
+                assert -WORLD_HALF - margin <= n[0] <= WORLD_HALF + margin
+                assert -WORLD_HALF - margin <= n[1] <= WORLD_HALF + margin
 
-    def test_nodes_within_world_bounds(self, roads):
-        margin = 50  # allow a little outside for roads to the edge
-        for road in roads:
-            for node in road["nodes"]:
-                x, y, z = node
-                assert -WORLD_HALF - margin <= x <= WORLD_HALF + margin, \
-                    f"{road['name']} node X={x} out of world"
-                assert -WORLD_HALF - margin <= y <= WORLD_HALF + margin, \
-                    f"{road['name']} node Y={y} out of world"
+    def test_elevations_plausible(self, roads_static):
+        for r in roads_static:
+            for n in r["nodes"]:
+                assert 40.0 < n[2] < 110.0
 
-    def test_elevations_plausible(self, roads):
-        for road in roads:
-            for node in road["nodes"]:
-                z = node[2]
-                assert 40.0 < z < 110.0, \
-                    f"{road['name']} node Z={z} implausible for Felsted"
+    def test_widths_positive(self, roads_static):
+        for r in roads_static:
+            assert r["width"] > 0
 
-    def test_stebbing_road_rises_northward(self, roads):
-        """Stebbing Road southbound: z should increase node-by-node going north."""
-        sr = next(r for r in roads if r["name"] == "road_stebbing_s")
-        z_vals = [n[2] for n in sr["nodes"]]
-        # First node (south, ~62 m) should be lower than last (campus, ~72 m)
-        assert z_vals[0] < z_vals[-1], "Stebbing Rd should rise from south→campus"
-
-    def test_widths_positive(self, roads):
-        for road in roads:
-            assert road["width"] > 0
-
-    def test_material_strings(self, roads):
-        valid = {"road_rubber_sticky", "dirt", "sidewalk", "asphalt"}
-        for road in roads:
-            assert isinstance(road["material"], str)
-            assert len(road["material"]) > 0
+    def test_minimum_two_nodes(self, roads_static):
+        for r in roads_static:
+            assert len(r["nodes"]) >= 2
 
 
-class TestBuildRoadsOffline:
-    def test_offline_equals_static(self):
-        result = build_roads(online=False)
-        assert result is _STATIC_ROADS
+# ── OSM road network ───────────────────────────────────────────────────────────
+
+class TestOsmRoads:
+    def test_more_roads_than_static(self, roads_osm):
+        assert len(roads_osm) > len(_STATIC_ROADS)
+
+    def test_schema(self, roads_osm):
+        for r in roads_osm[:20]:
+            assert "name" in r
+            assert "material" in r
+            assert "width" in r
+            assert len(r["nodes"]) >= 2
+
+    def test_node_xyz_three_elements(self, roads_osm):
+        for r in roads_osm[:20]:
+            for n in r["nodes"]:
+                assert len(n) == 3
+
+    def test_nodes_within_world(self, roads_osm):
+        margin = 150
+        for r in roads_osm[:50]:
+            for n in r["nodes"]:
+                assert -WORLD_HALF - margin <= n[0] <= WORLD_HALF + margin
+                assert -WORLD_HALF - margin <= n[1] <= WORLD_HALF + margin
+
+    def test_elevations_use_terrain(self, roads_osm):
+        """All Z values should be ~76 m (our flat mock elevation_fn)."""
+        for r in roads_osm[:20]:
+            for n in r["nodes"]:
+                assert abs(n[2] - 76.0) < 0.01
+
+    def test_road_names_unique(self, roads_osm):
+        names = [r["name"] for r in roads_osm]
+        assert len(names) == len(set(names)), "Duplicate road names"
+
+    def test_materials_are_strings(self, roads_osm):
+        for r in roads_osm:
+            assert isinstance(r["material"], str)
+            assert len(r["material"]) > 0

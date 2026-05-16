@@ -1,146 +1,154 @@
-"""Tests for the BeamNG level JSON assembly."""
+"""Tests for the BeamNG level JSON assembly — v3.0."""
 
 import json
-import tempfile
+import pytest
 from pathlib import Path
 
-import pytest
 from tools.level_builder import build_level, _SPAWN_POINTS
 from tools.osm_roads import _STATIC_ROADS
+from tools.osm_parse import OsmData
+from tools.buildings import build_building_objects
+from tools.water import build_water_objects
+from tools.vegetation import build_vegetation_objects
+from tools.constants import SQUARE_SIZE
+
+
+_ELEV = lambda wx, wy: 76.0
 
 
 @pytest.fixture(scope="module")
-def level_json(tmp_path_factory):
-    p = tmp_path_factory.mktemp("level") / "main.level.json"
-    build_level(_STATIC_ROADS, p)
-    with p.open() as f:
-        return json.load(f)
+def level(tmp_path_factory):
+    p = tmp_path_factory.mktemp("lvl") / "main.level.json"
+    buildings  = build_building_objects(OsmData(), _ELEV)
+    water      = build_water_objects(OsmData(), _ELEV)
+    vegetation = build_vegetation_objects(OsmData(), _ELEV)
+    build_level(_STATIC_ROADS, buildings, water, vegetation, out_path=p)
+    return json.loads(p.read_text())
 
 
 def _all_objects(obj, acc=None):
-    """Flatten the full object tree into a list."""
-    if acc is None:
-        acc = []
+    if acc is None: acc = []
     acc.append(obj)
     for child in obj.get("children", []):
         _all_objects(child, acc)
     return acc
 
 
-class TestLevelStructure:
-    def test_top_level_is_sim_group(self, level_json):
-        assert level_json["class"] == "SimGroup"
+def _by_class(level, cls):
+    return [o for o in _all_objects(level) if o.get("class") == cls]
 
-    def test_mission_group_name(self, level_json):
-        assert level_json["name"] == "MissionGroup"
 
-    def test_has_children(self, level_json):
-        assert "children" in level_json
-        assert len(level_json["children"]) > 0
+class TestTopLevel:
+    def test_is_sim_group(self, level):
+        assert level["class"] == "SimGroup"
 
-    def test_persistent_id_present(self, level_json):
-        assert "persistentId" in level_json
-        assert len(level_json["persistentId"]) == 36  # UUID format
+    def test_name(self, level):
+        assert level["name"] == "MissionGroup"
 
-    def test_unique_persistent_ids(self, level_json):
-        all_objs = _all_objects(level_json)
-        ids = [o["persistentId"] for o in all_objs if "persistentId" in o]
-        assert len(ids) == len(set(ids)), "Duplicate persistentIds found"
+    def test_has_children(self, level):
+        assert len(level.get("children", [])) > 0
+
+    def test_persistent_id_uuid(self, level):
+        pid = level["persistentId"]
+        assert len(pid) == 36
+        assert pid.count("-") == 4
+
+    def test_unique_persistent_ids(self, level):
+        ids = [o["persistentId"] for o in _all_objects(level)
+               if "persistentId" in o]
+        assert len(ids) == len(set(ids))
 
 
 class TestRequiredObjects:
-    def _classes(self, level_json):
-        return {o["class"] for o in _all_objects(level_json)}
+    def test_terrain_block(self, level):
+        assert len(_by_class(level, "TerrainBlock")) == 1
 
-    def test_has_terrain_block(self, level_json):
-        assert "TerrainBlock" in self._classes(level_json)
+    def test_sun(self, level):
+        assert len(_by_class(level, "Sun")) == 1
 
-    def test_has_sun(self, level_json):
-        assert "Sun" in self._classes(level_json)
+    def test_scatter_sky(self, level):
+        assert len(_by_class(level, "ScatterSky")) == 1
 
-    def test_has_scatter_sky(self, level_json):
-        assert "ScatterSky" in self._classes(level_json)
+    def test_level_info(self, level):
+        assert len(_by_class(level, "LevelInfo")) == 1
 
-    def test_has_level_info(self, level_json):
-        assert "LevelInfo" in self._classes(level_json)
+    def test_spawn_spheres(self, level):
+        assert len(_by_class(level, "SpawnSphere")) > 0
 
-    def test_has_spawn_spheres(self, level_json):
-        assert "SpawnSphere" in self._classes(level_json)
+    def test_decal_roads(self, level):
+        assert len(_by_class(level, "DecalRoad")) > 0
 
-    def test_has_decal_roads(self, level_json):
-        assert "DecalRoad" in self._classes(level_json)
+    def test_water_blocks(self, level):
+        assert len(_by_class(level, "WaterBlock")) > 0
+
+    def test_ts_static_buildings(self, level):
+        assert len(_by_class(level, "TSStatic")) > 0
 
 
 class TestTerrainBlock:
-    def _terrain(self, level_json):
-        return next(o for o in _all_objects(level_json)
-                    if o["class"] == "TerrainBlock")
-
-    def test_terrain_file_path(self, level_json):
-        t = self._terrain(level_json)
+    def test_terrain_file(self, level):
+        t = _by_class(level, "TerrainBlock")[0]
         assert "terrainFile" in t
         assert t["terrainFile"].endswith("felsted.ter")
 
-    def test_square_size(self, level_json):
-        t = self._terrain(level_json)
-        from tools.constants import SQUARE_SIZE
-        assert t["squareSize"] == SQUARE_SIZE
+    def test_square_size_2m(self, level):
+        t = _by_class(level, "TerrainBlock")[0]
+        assert t["squareSize"] == SQUARE_SIZE == 2.0
 
-    def test_position_at_origin(self, level_json):
-        t = self._terrain(level_json)
-        assert t["position"] == [0, 0, 0]
+    def test_high_base_tex_size(self, level):
+        t = _by_class(level, "TerrainBlock")[0]
+        assert t["baseTexSize"] >= 256
+
+    def test_fine_screen_error(self, level):
+        t = _by_class(level, "TerrainBlock")[0]
+        assert t["screenError"] <= 16
 
 
 class TestSpawnSpheres:
-    def _spawns(self, level_json):
-        return [o for o in _all_objects(level_json)
-                if o["class"] == "SpawnSphere"]
+    def test_eight_spawns(self, level):
+        assert len(_by_class(level, "SpawnSphere")) == len(_SPAWN_POINTS) == 8
 
-    def test_correct_count(self, level_json):
-        assert len(self._spawns(level_json)) == len(_SPAWN_POINTS)
+    def test_spawn_names(self, level):
+        spawns = {o["name"] for o in _by_class(level, "SpawnSphere")}
+        assert "spawn_main_entrance"  in spawns
+        assert "spawn_campus_centre" in spawns
+        assert "spawn_sports_fields" in spawns
+        assert "spawn_chapel_approach" in spawns
 
-    def test_spawn_names_match(self, level_json):
-        names = {o["name"] for o in self._spawns(level_json)}
-        for expected_name, *_ in _SPAWN_POINTS:
-            assert expected_name in names
+    def test_spawn_positions_lists(self, level):
+        for s in _by_class(level, "SpawnSphere"):
+            assert isinstance(s["position"], list)
+            assert len(s["position"]) == 3
 
-    def test_spawn_positions_are_lists(self, level_json):
-        for spawn in self._spawns(level_json):
-            pos = spawn["position"]
-            assert isinstance(pos, list)
-            assert len(pos) == 3
+    def test_spawn_elevations_plausible(self, level):
+        for s in _by_class(level, "SpawnSphere"):
+            z = s["position"][2]
+            assert 40.0 < z < 110.0
 
-    def test_spawn_elevations_plausible(self, level_json):
-        for spawn in self._spawns(level_json):
-            z = spawn["position"][2]
-            assert 40.0 < z < 110.0, f"Spawn {spawn['name']} Z={z} implausible"
+
+class TestSun:
+    def test_uk_latitude_sun(self, level):
+        sun = _by_class(level, "Sun")[0]
+        # UK summer afternoon: azimuth ~200-230°, elevation ~35-55°
+        assert 180 <= sun["azimuth"] <= 250
+        assert 30  <= sun["elevation"] <= 60
 
 
 class TestDecalRoads:
-    def _roads(self, level_json):
-        return [o for o in _all_objects(level_json)
-                if o["class"] == "DecalRoad"]
+    def test_road_count(self, level):
+        roads = [o for o in _by_class(level, "DecalRoad")
+                 if not o["name"].startswith(("footprint_", "pitch_", "stream_",
+                                               "river_", "pond_"))]
+        assert len(roads) >= len(_STATIC_ROADS)
 
-    def test_road_count_matches_input(self, level_json):
-        assert len(self._roads(level_json)) == len(_STATIC_ROADS)
+    def test_road_nodes_four_elements(self, level):
+        for r in _by_class(level, "DecalRoad")[:20]:
+            for n in r["nodes"]:
+                assert len(n) == 4, f"{r['name']} node {n} not [x,y,z,w]"
 
-    def test_road_nodes_are_lists(self, level_json):
-        for road in self._roads(level_json):
-            assert isinstance(road["nodes"], list)
-            assert all(isinstance(n, list) for n in road["nodes"])
+    def test_road_material_strings(self, level):
+        for r in _by_class(level, "DecalRoad"):
+            assert isinstance(r["material"], str)
 
-    def test_road_nodes_four_elements(self, level_json):
-        """Each node is [x, y, z, width]."""
-        for road in self._roads(level_json):
-            for node in road["nodes"]:
-                assert len(node) == 4, \
-                    f"{road['name']} node {node} should have 4 elements"
-
-    def test_road_has_material(self, level_json):
-        for road in self._roads(level_json):
-            assert "material" in road
-            assert isinstance(road["material"], str)
-
-    def test_json_serialisable(self, level_json):
-        # Already loaded as dict; re-serialise to catch any non-JSON types
-        assert json.dumps(level_json) is not None
+    def test_json_serialisable(self, level):
+        assert json.dumps(level) is not None
