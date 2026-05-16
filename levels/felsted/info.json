@@ -1,0 +1,31 @@
+{
+  "name": "Felsted School",
+  "description": "Felsted School campus, Essex, England — a 90-acre independent school founded in 1564. Features Stebbing Road, the chapel approach, campus loop, car parks, and the sports fields. Road geometry from OpenStreetMap; terrain from SRTM data.",
+  "type": "map",
+  "author": "felsted-ng-drive",
+  "version": "0.1.0",
+  "spawnPoints": [
+    {
+      "name": "Main Entrance (Stebbing Road gate)",
+      "objectname": "spawn_main_entrance"
+    },
+    {
+      "name": "Car Park",
+      "objectname": "spawn_car_park"
+    },
+    {
+      "name": "Campus Centre",
+      "objectname": "spawn_campus_centre"
+    },
+    {
+      "name": "Sports Fields",
+      "objectname": "spawn_sports_fields"
+    }
+  ],
+  "previews": [
+    {
+      "title": "Felsted School campus overview",
+      "image": "levels/felsted/preview.png"
+    }
+  ]
+}

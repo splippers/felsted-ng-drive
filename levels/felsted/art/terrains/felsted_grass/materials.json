@@ -1,0 +1,11 @@
+{
+  "felsted_grass": {
+    "class": "TerrainMaterial",
+    "diffuseMap": "levels/felsted/art/terrains/felsted_grass/diffuse.png",
+    "normalMap":  "levels/felsted/art/terrains/felsted_grass/normal.png",
+    "detailScale": 10.0,
+    "detailStrength": 1.0,
+    "useSideProjection": false,
+    "groundModel": "grass2"
+  }
+}
