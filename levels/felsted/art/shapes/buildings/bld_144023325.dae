@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1">
+  <asset>
+    <unit name="meter" meter="1"/>
+    <up_axis>Z_UP</up_axis>
+  </asset>
+  <library_materials>
+    <material id="Mat_building" name="building">
+      <instance_effect url="#Mat_building_effect"/>
+    </material>
+  </library_materials>
+  <library_effects>
+    <effect id="Mat_building_effect">
+      <profile_COMMON>
+        <technique sid="common">
+          <phong>
+            <diffuse><color>0.72 0.65 0.55 1</color></diffuse>
+            <specular><color>0.05 0.05 0.05 1</color></specular>
+          </phong>
+        </technique>
+      </profile_COMMON>
+    </effect>
+  </library_effects>
+  <library_geometries>
+    <geometry id="geo_Holy Cross" name="Holy Cross">
+      <mesh>
+        <source id="geo_Holy Cross_pos">
+          <float_array id="geo_Holy Cross_pos_arr" count="168">-290.284 -205.007 73.872 -287.236 -204.785 73.872 -287.525 -200.850 73.872 -289.707 -201.017 73.872 -290.867 -185.069 73.872 -281.285 -184.368 73.872 -280.132 -200.261 73.872 -283.111 -200.484 73.872 -282.823 -204.462 73.872 -269.513 -203.496 73.872 -269.177 -208.086 73.872 -266.239 -207.874 73.872 -261.785 -207.508 73.872 -262.183 -202.773 73.872 -256.005 -202.251 73.872 -254.406 -221.489 73.872 -265.045 -222.367 73.872 -265.258 -219.822 73.872 -277.043 -220.800 73.872 -276.673 -225.223 73.872 -279.377 -225.512 73.872 -282.191 -225.657 73.872 -282.534 -221.022 73.872 -288.485 -221.456 73.872 -288.739 -218.021 73.872 -294.690 -218.455 73.872 -295.205 -211.431 73.872 -289.845 -211.042 73.872 -290.284 -205.007 91.872 -287.236 -204.785 91.872 -287.525 -200.850 91.872 -289.707 -201.017 91.872 -290.867 -185.069 91.872 -281.285 -184.368 91.872 -280.132 -200.261 91.872 -283.111 -200.484 91.872 -282.823 -204.462 91.872 -269.513 -203.496 91.872 -269.177 -208.086 91.872 -266.239 -207.874 91.872 -261.785 -207.508 91.872 -262.183 -202.773 91.872 -256.005 -202.251 91.872 -254.406 -221.489 91.872 -265.045 -222.367 91.872 -265.258 -219.822 91.872 -277.043 -220.800 91.872 -276.673 -225.223 91.872 -279.377 -225.512 91.872 -282.191 -225.657 91.872 -282.534 -221.022 91.872 -288.485 -221.456 91.872 -288.739 -218.021 91.872 -294.690 -218.455 91.872 -295.205 -211.431 91.872 -289.845 -211.042 91.872</float_array>
+          <technique_common>
+            <accessor source="#geo_Holy Cross_pos_arr" count="56" stride="3">
+              <param name="X" type="float"/>
+              <param name="Y" type="float"/>
+              <param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <vertices id="geo_Holy Cross_verts">
+          <input semantic="POSITION" source="#geo_Holy Cross_pos"/>
+        </vertices>
+        <triangles count="82" material="Mat_building">
+          <input semantic="VERTEX" source="#geo_Holy Cross_verts" offset="0"/>
+          <p>0 1 29 0 29 28 1 2 30 1 30 29 2 3 31 2 31 30 3 4 32 3 32 31 4 5 33 4 33 32 5 6 34 5 34 33 6 7 35 6 35 34 7 8 36 7 36 35 8 9 37 8 37 36 9 10 38 9 38 37 10 11 39 10 39 38 11 12 40 11 40 39 12 13 41 12 41 40 13 14 42 13 42 41 14 15 43 14 43 42 15 16 44 15 44 43 16 17 45 16 45 44 17 18 46 17 46 45 18 19 47 18 47 46 19 20 48 19 48 47 20 21 49 20 49 48 21 22 50 21 50 49 22 23 51 22 51 50 23 24 52 23 52 51 24 25 53 24 53 52 25 26 54 25 54 53 26 27 55 26 55 54 27 0 28 27 28 55 55 29 28 30 32 31 30 33 32 29 33 30 33 35 34 29 35 33 55 35 29 55 36 35 55 37 36 55 38 37 55 39 38 55 40 39 40 42 41 40 43 42 55 43 40 43 45 44 55 45 43 55 46 45 55 47 46 47 49 48 47 50 49 55 50 47 50 52 51 55 52 50 55 53 52 53 55 54</p>
+        </triangles>
+      </mesh>
+    </geometry>
+  </library_geometries>
+  <library_visual_scenes>
+    <visual_scene id="Scene" name="Scene">
+      <node id="Building" name="Holy Cross" type="NODE">
+        <instance_geometry url="#geo_Holy Cross">
+          <bind_material>
+            <technique_common>
+              <instance_material symbol="Mat_building" target="#Mat_building"/>
+            </technique_common>
+          </bind_material>
+        </instance_geometry>
+      </node>
+    </visual_scene>
+  </library_visual_scenes>
+  <scene>
+    <instance_visual_scene url="#Scene"/>
+  </scene>
+</COLLADA>
