@@ -89,12 +89,13 @@ def main(
     pack_zip:        bool = False,
     do_satellite:    bool = False,
     satellite_zoom:  int  = 17,
+    lidar:           bool = False,
 ) -> None:
     log.info("=== Felsted School map generator v%s (photoreal) ===", MAP_VERSION)
 
     # 1. Elevation ─────────────────────────────────────────────────────────────
-    log.info("Step 1/6 – build elevation (1025×1025, 2 m/cell, SRTM-30m base)")
-    elev    = build_elevation(online=online)
+    log.info("Step 1/6 – build elevation (1025×1025, 2 m/cell; LiDAR DTM 2 m base)")
+    elev    = build_elevation(online=online, lidar=lidar)
     elev_fn = lambda wx, wy: elev_at_world(elev, wx, wy)
 
     # 2. Satellite texture ─────────────────────────────────────────────────────
@@ -163,6 +164,8 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=f"Felsted School BeamNG map generator v{MAP_VERSION}")
     ap.add_argument("--online",    action="store_true",
                     help="Refresh OSM roads + SRTM elevation from live APIs")
+    ap.add_argument("--lidar",     action="store_true",
+                    help="Download Environment Agency LiDAR DTM 2 m terrain (OGL)")
     ap.add_argument("--satellite", action="store_true",
                     help="Download ESRI WorldImagery satellite tiles")
     ap.add_argument("--zoom",      type=int, default=17,
@@ -171,4 +174,5 @@ if __name__ == "__main__":
                     help="Package output as felsted.zip mod archive")
     args = ap.parse_args()
     main(online=args.online, pack_zip=args.zip,
-         do_satellite=args.satellite, satellite_zoom=args.zoom)
+         do_satellite=args.satellite, satellite_zoom=args.zoom,
+         lidar=args.lidar)

@@ -25,7 +25,7 @@
     <geometry id="geo_Felsted Telephone Exchange" name="Felsted Telephone Exchange">
       <mesh>
         <source id="geo_Felsted Telephone Exchange_pos">
-          <float_array id="geo_Felsted Telephone Exchange_pos_arr" count="36">-66.354 -603.752 68.378 -71.694 -589.203 68.378 -76.176 -590.848 68.378 -77.686 -586.747 68.378 -91.744 -591.915 68.378 -84.893 -610.564 68.378 -66.354 -603.752 76.378 -71.694 -589.203 76.378 -76.176 -590.848 76.378 -77.686 -586.747 76.378 -91.744 -591.915 76.378 -84.893 -610.564 76.378</float_array>
+          <float_array id="geo_Felsted Telephone Exchange_pos_arr" count="36">-66.354 -603.752 71.906 -71.694 -589.203 71.906 -76.176 -590.848 71.906 -77.686 -586.747 71.906 -91.744 -591.915 71.906 -84.893 -610.564 71.906 -66.354 -603.752 79.906 -71.694 -589.203 79.906 -76.176 -590.848 79.906 -77.686 -586.747 79.906 -91.744 -591.915 79.906 -84.893 -610.564 79.906</float_array>
           <technique_common>
             <accessor source="#geo_Felsted Telephone Exchange_pos_arr" count="12" stride="3">
               <param name="X" type="float"/>

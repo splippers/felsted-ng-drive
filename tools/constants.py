@@ -12,13 +12,13 @@ from pathlib import Path
 # ── Identity ───────────────────────────────────────────────────────────────────
 MAP_NAME    = "felsted"
 MAP_TITLE   = "Felsted School"
-MAP_VERSION = "3.0.0"
+MAP_VERSION = "3.1.0"
 MAP_DESC    = (
     "Felsted School campus, Essex, England — a 90-acre independent school "
     "founded in 1564.  2 km × 2 km world at 2 m terrain resolution.  "
     "Road geometry, buildings, and water from OpenStreetMap; terrain from "
-    "SRTM-30m elevation data (River Chelmer valley 40 m → campus 76 m → "
-    "North Essex hills 84 m)."
+    "Environment Agency LiDAR Composite DTM 2 m (River Chelmer valley "
+    "40 m → campus 76 m → surrounding ridge 77 m)."
 )
 MAP_AUTHOR = "felsted-ng-drive"
 
@@ -30,6 +30,11 @@ TERRAIN_DIR  = LEVELS_DIR / "terrainGrid"
 
 OSM_CACHE    = DATA_DIR / "felsted_osm.json"
 SRTM_CACHE   = DATA_DIR / "felsted_srtm_32x32.json"
+
+# Environment Agency LiDAR DTM (see tools/lidar.py)
+LIDAR_DIR        = DATA_DIR / "lidar"
+LIDAR_TIF_CACHE  = LIDAR_DIR / "felsted_dtm_2m.tif"
+LIDAR_GRID_CACHE = DATA_DIR / "felsted_lidar_1025.npy"
 
 # ── GPS anchor ────────────────────────────────────────────────────────────────
 # Centre of main school building façade; map is 2 048 m square around it.
@@ -43,6 +48,10 @@ BBOX = (51.840, 0.410, 51.880, 0.465)
 # ── Projection ────────────────────────────────────────────────────────────────
 _LAT_SCALE = 111_139.0
 _LON_SCALE = 111_139.0 * math.cos(math.radians(CENTER_LAT))  # ≈ 68 620 m/°
+
+# Public aliases (used by heightmap/lidar resampling)
+LAT_SCALE = _LAT_SCALE
+LON_SCALE = _LON_SCALE
 
 
 def gps_to_world(lat: float, lon: float) -> tuple[float, float]:
