@@ -68,6 +68,7 @@ from tools.buildings3d   import build_building_meshes
 from tools.water         import build_water_objects
 from tools.vegetation    import build_vegetation_objects
 from tools.railway       import build_railway_objects
+from tools.game_elements import build_game_elements
 from tools.level_builder import build_level
 
 logging.basicConfig(
@@ -128,6 +129,10 @@ def main(
     water      = build_water_objects(osm, elev_fn)
     vegetation = build_vegetation_objects(osm, elev_fn)
 
+    # 4b. Game elements derived from OSM road semantics ────────────────────────
+    log.info("Step 4b/6 – derive game elements (medians, barriers, furniture)")
+    elements = build_game_elements(osm.roads, elev_fn)
+
     # 5. 3D building meshes + railway ─────────────────────────────────────────
     log.info("Step 5/6 – generate 3D building meshes and railway")
     bld_meshes = build_building_meshes(osm, elev_fn)
@@ -142,6 +147,7 @@ def main(
         vegetation      = vegetation,
         building_meshes = bld_meshes,
         railway         = railway,
+        game_elements   = elements,
         out_path        = LEVEL_JSON,
     )
 

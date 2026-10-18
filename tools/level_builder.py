@@ -163,6 +163,7 @@ def build_level(roads:            list[dict],
                 vegetation:       list[dict] | None = None,
                 building_meshes:  list[dict] | None = None,
                 railway:          list[dict] | None = None,
+                game_elements:    dict | None = None,
                 out_path:         Path | str = None) -> None:
     """
     Write the main.level.json scene graph.
@@ -175,6 +176,9 @@ def build_level(roads:            list[dict],
     vegetation      : objects from vegetation.build_vegetation_objects()
     building_meshes : 3D TSStatic objects from buildings3d.build_building_meshes()
     railway         : historical railway objects from railway.build_railway_objects()
+    game_elements   : {"linear": [...], "objects": [...]} from
+                      game_elements.build_game_elements() — medians/barriers
+                      join the Roads group, points go in a GameElements group
     out_path        : destination file
     """
     if out_path is None:
@@ -183,8 +187,12 @@ def build_level(roads:            list[dict],
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Roads
-    roads_group = _group("Roads", *[_decal_road(r) for r in roads])
+    elements     = game_elements or {}
+    elem_linear  = list(elements.get("linear", []))
+    elem_objects = list(elements.get("objects", []))
+
+    # Roads (real carriageways + derived linear elements like medians)
+    roads_group = _group("Roads", *[_decal_road(r) for r in [*roads, *elem_linear]])
 
     # Buildings — markers/footprints from osm buildings + 3D meshes from buildings3d
     bld_markers:    list[dict] = []
@@ -206,6 +214,9 @@ def build_level(roads:            list[dict],
     # Historical railway
     rail_group = _group("Railway", *(railway or []))
 
+    # Game elements (speed signs, lamps, bridge/tunnel markers)
+    elem_group = _group("GameElements", *elem_objects)
+
     # Spawn
     spawn_group = _group("Spawn",
                           *[_spawn(*s) for s in _SPAWN_POINTS])
@@ -222,19 +233,20 @@ def build_level(roads:            list[dict],
         water_group,
         veg_group,
         rail_group,
+        elem_group,
     )
 
     with out_path.open("w", encoding="utf-8") as f:
         json.dump(mission_group, f, indent=2)
 
-    road_count  = len(roads)
+    road_count  = len(roads) + len(elem_linear)
     bld_count   = len(bld_markers) + len(bld_3d)
     water_count = len(water or [])
     veg_count   = len(vegetation or [])
     rail_count  = len(railway or [])
     log.info(
-        "Level written: %d roads, %d buildings, %d water, %d vegetation, "
-        "%d railway, %d spawns → %s",
-        road_count, bld_count, water_count, veg_count, rail_count,
-        len(_SPAWN_POINTS), out_path,
+        "Level written: %d roads (+%d linear elements), %d buildings, "
+        "%d water, %d vegetation, %d railway, %d game objects, %d spawns → %s",
+        road_count, len(elem_linear), bld_count, water_count, veg_count,
+        rail_count, len(elem_objects), len(_SPAWN_POINTS), out_path,
     )
