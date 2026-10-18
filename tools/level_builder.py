@@ -24,7 +24,10 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from tools.constants import MAP_NAME, MAP_VERSION, SQUARE_SIZE
+from tools.constants import (MAP_NAME, MAP_TITLE, MAP_DESC, MAP_AUTHOR,
+                             MAP_VERSION, MAP_BIOME, MAP_ROADS,
+                             MAP_SUITABLEFOR, MAP_FEATURES, SPAWN_LABELS,
+                             BLOCK_SIZE, SQUARE_SIZE)
 
 log = logging.getLogger(__name__)
 
@@ -155,6 +158,52 @@ _SPAWN_POINTS = [
 ]
 
 
+# ── Level metadata (info.json) — BeamNG LevelInfo schema ──────────────────────
+def write_info_json(out_path: Path | str,
+                    level_size: int | None = None) -> Path:
+    """
+    Write levels/<map>/info.json in BeamNG's LevelInfo schema.
+
+    BeamNG reads this to populate the level selector (title, size, biome,
+    spawn points, preview).  Everything comes from tools/constants.py.
+    """
+    out_path  = Path(out_path)
+    level_dir = out_path.parent
+    if level_size is None:
+        level_size = int(BLOCK_SIZE * SQUARE_SIZE)
+
+    spawn_points = []
+    for sp in _SPAWN_POINTS:
+        entry = {"objectname": sp[0]}
+        if sp[0] in SPAWN_LABELS:
+            entry["name"] = SPAWN_LABELS[sp[0]]
+        spawn_points.append(entry)
+
+    info = {
+        "title":       MAP_TITLE,
+        "description": MAP_DESC,
+        "size":        [level_size, level_size],
+        "biome":       MAP_BIOME,
+        "roads":       MAP_ROADS,
+        "suitablefor": MAP_SUITABLEFOR,
+        "features":    MAP_FEATURES,
+        "authors":     MAP_AUTHOR,
+        "version":     MAP_VERSION,
+        "defaultSpawnPointName": spawn_points[0]["objectname"] if spawn_points else "",
+        "spawnPoints":       spawn_points,
+        "supportsTraffic":   True,
+        "supportsTimeOfDay": True,
+        "previews":          ["preview.png"],
+    }
+
+    info_path = level_dir / "info.json"
+    with info_path.open("w", encoding="utf-8") as f:
+        json.dump(info, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+    log.info("Level info written: %s (%d spawns)", info_path, len(spawn_points))
+    return info_path
+
+
 # ── Public API ─────────────────────────────────────────────────────────────────
 
 def build_level(roads:            list[dict],
@@ -238,6 +287,9 @@ def build_level(roads:            list[dict],
 
     with out_path.open("w", encoding="utf-8") as f:
         json.dump(mission_group, f, indent=2)
+
+    # Level-selector metadata (info.json) — always emitted alongside the level
+    write_info_json(out_path)
 
     road_count  = len(roads) + len(elem_linear)
     bld_count   = len(bld_markers) + len(bld_3d)

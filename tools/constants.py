@@ -22,6 +22,25 @@ MAP_DESC    = (
 )
 MAP_AUTHOR = "felsted-ng-drive"
 
+# Level-selector metadata (BeamNG LevelInfo schema) — see level_builder.write_info_json
+MAP_BIOME       = "English Countryside"
+MAP_ROADS       = "OSM: B1008, Stebbing Road, campus roads, service"
+MAP_SUITABLEFOR = "Free Roam, Point-to-Point"
+MAP_FEATURES    = ("Environment Agency LiDAR 2 m terrain, OSM game elements "
+                   "(speed limits, bridges), campus buildings, sports fields")
+
+# Human-readable spawn names for the level selector (info.json)
+SPAWN_LABELS = {
+    "spawn_main_entrance":  "Main Entrance (Stebbing Road gate)",
+    "spawn_car_park":       "Car Park",
+    "spawn_campus_centre":  "Campus Centre",
+    "spawn_sports_fields":  "Sports Fields",
+    "spawn_chapel_approach": "Chapel Approach",
+    "spawn_north_road":     "North Road (Stebbing Road)",
+    "spawn_braintree_east": "Braintree Road — east exit",
+    "spawn_sports_centre":  "Sports Centre",
+}
+
 # ── Paths ──────────────────────────────────────────────────────────────────────
 ROOT         = Path(__file__).parent.parent.resolve()
 DATA_DIR     = ROOT / "data"
