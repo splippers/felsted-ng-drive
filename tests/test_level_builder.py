@@ -95,6 +95,12 @@ class TestTerrainBlock:
         t = _by_class(level, "TerrainBlock")[0]
         assert t["squareSize"] == SQUARE_SIZE == 2.0
 
+    def test_position_is_south_west_corner(self, level):
+        """position is the SW corner (the .ter row 0 = south edge)."""
+        from tools.constants import WORLD_HALF
+        t = _by_class(level, "TerrainBlock")[0]
+        assert t["position"] == [-WORLD_HALF, -WORLD_HALF, 0]
+
     def test_high_base_tex_size(self, level):
         t = _by_class(level, "TerrainBlock")[0]
         assert t["baseTexSize"] >= 256
