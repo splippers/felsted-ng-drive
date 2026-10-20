@@ -1,0 +1,11 @@
+{
+  "felsted_satellite": {
+    "class": "TerrainMaterial",
+    "diffuseMap":  "levels/felsted/art/terrain/satellite/satellite.png",
+    "normalMap":   "levels/felsted/art/terrain/satellite/flat_n.png",
+    "detailScale": 2048.0,
+    "detailStrength": 0.0,
+    "useSideProjection": false,
+    "groundModel": "asphalt"
+  }
+}

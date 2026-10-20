@@ -220,6 +220,7 @@ def build_level(roads:            list[dict],
                 vegetation:       list[dict] | None = None,
                 building_meshes:  list[dict] | None = None,
                 railway:          list[dict] | None = None,
+                photos:           list[dict] | None = None,
                 game_elements:    dict | None = None,
                 out_path:         Path | str = None) -> None:
     """
@@ -271,6 +272,9 @@ def build_level(roads:            list[dict],
     # Historical railway
     rail_group = _group("Railway", *(railway or []))
 
+    # Historical photo billboards
+    photo_group = _group("Photos", *(photos or []))
+
     # Game elements (speed signs, lamps, bridge/tunnel markers)
     elem_group = _group("GameElements", *elem_objects)
 
@@ -290,6 +294,7 @@ def build_level(roads:            list[dict],
         water_group,
         veg_group,
         rail_group,
+        photo_group,
         elem_group,
     )
 

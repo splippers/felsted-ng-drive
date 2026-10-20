@@ -1,8 +1,8 @@
 {
-  "felsted_grass": {
+  "felsted_satellite": {
     "class": "TerrainMaterial",
-    "internalName": "felsted_grass",
-    "diffuseMap": "/levels/felsted/art/terrains/felsted_grass_diffuse.png",
+    "internalName": "felsted_satellite",
+    "diffuseMap": "/levels/felsted/art/terrains/felsted_satellite_diffuse.png",
     "diffuseSize": 64.0,
     "groundmodelName": "GRASS",
     "annotation": "GRASS",

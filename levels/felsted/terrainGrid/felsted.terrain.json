@@ -8,7 +8,7 @@
   "layerMapSize": 1048576,
   "layerMapItemSize": 1,
   "materials": [
-    "felsted_grass"
+    "felsted_satellite"
   ],
   "heightmapImage": "/levels/felsted/terrainGrid/felsted_height.png"
 }
