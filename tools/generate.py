@@ -88,11 +88,13 @@ MOD_ZIP    = ROOT / f"{MAP_NAME}.zip"
 
 
 def main(
-    online:          bool = False,
-    pack_zip:        bool = False,
-    do_satellite:    bool = False,
-    satellite_zoom:  int  = 17,
-    lidar:           bool = False,
+    online:           bool = False,
+    pack_zip:         bool = False,
+    do_satellite:     bool = False,
+    satellite_zoom:   int  = 17,
+    lidar:            bool = False,
+    do_streetview:    bool = False,
+    mapillary_token:  str  = None,
 ) -> None:
     log.info("=== Felsted School map generator v%s (photoreal) ===", MAP_VERSION)
 
@@ -147,6 +149,35 @@ def main(
     bld_meshes = build_building_meshes(osm, elev_fn)
     railway    = build_railway_objects(osm, elev_fn)
 
+    # Optional Mapillary street-level imagery
+    if do_streetview:
+        try:
+            from tools.fetch_streetview import fetch_streetview, merge_manifest
+            import os as _os
+            token = mapillary_token or _os.environ.get("MAPILLARY_ACCESS_TOKEN") or _os.environ.get("MAPILLARY_TOKEN")
+            if token:
+                from tools.constants import BBOX
+                sv_photos = fetch_streetview(BBOX, token)
+                if sv_photos:
+                    merge_manifest(sv_photos)
+            else:
+                log.warning("Street-view requested but no Mapillary token; skipping.")
+        except Exception as e:
+            log.warning("Street-view fetch failed: %s", e)
+
+    # Historical / street-view photo billboards
+    try:
+        from tools import photo_spots as _ps
+        _ps.write_billboard_dae()
+    except Exception as e:
+        log.warning("billboard dae write failed: %s", e)
+    photos = []
+    try:
+        from tools.photo_spots import build_photo_objects
+        photos = build_photo_objects(elev_fn)
+    except Exception as e:
+        log.warning("photo build failed: %s", e)
+
     # 6. Level JSON ────────────────────────────────────────────────────────────
     log.info("Step 6/6 – write main.level.json")
     build_level(
@@ -156,6 +187,7 @@ def main(
         vegetation      = vegetation,
         building_meshes = bld_meshes,
         railway         = railway,
+        photos          = photos,
         game_elements   = elements,
         out_path        = LEVEL_JSON,
     )
@@ -187,7 +219,12 @@ if __name__ == "__main__":
                     help="Tile zoom level for satellite download (17=0.74m/px, 18=0.37m/px)")
     ap.add_argument("--zip",       action="store_true",
                     help="Package output as felsted.zip mod archive")
+    ap.add_argument("--streetview", action="store_true",
+                    help="Fetch Mapillary street-level imagery (needs MAPILLARY_ACCESS_TOKEN)")
+    ap.add_argument("--mapillary-token", default=None)
     args = ap.parse_args()
     main(online=args.online, pack_zip=args.zip,
          do_satellite=args.satellite, satellite_zoom=args.zoom,
-         lidar=args.lidar)
+         lidar=args.lidar,
+         do_streetview=args.streetview,
+         mapillary_token=args.mapillary_token)
