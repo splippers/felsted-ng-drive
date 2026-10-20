@@ -25,7 +25,7 @@
     <geometry id="geo_Felsted School Sports Centre" name="Felsted School Sports Centre">
       <mesh>
         <source id="geo_Felsted School Sports Centre_pos">
-          <float_array id="geo_Felsted School Sports Centre_pos_arr" count="36">135.639 216.877 73.862 163.431 200.695 73.862 153.657 183.913 73.862 148.296 187.036 73.862 128.816 198.383 73.862 125.864 200.106 73.862 135.639 216.877 85.862 163.431 200.695 85.862 153.657 183.913 85.862 148.296 187.036 85.862 128.816 198.383 85.862 125.864 200.106 85.862</float_array>
+          <float_array id="geo_Felsted School Sports Centre_pos_arr" count="36">135.639 216.877 72.235 163.431 200.695 72.235 153.657 183.913 72.235 148.296 187.036 72.235 128.816 198.383 72.235 125.864 200.106 72.235 135.639 216.877 84.235 163.431 200.695 84.235 153.657 183.913 84.235 148.296 187.036 84.235 128.816 198.383 84.235 125.864 200.106 84.235</float_array>
           <technique_common>
             <accessor source="#geo_Felsted School Sports Centre_pos_arr" count="12" stride="3">
               <param name="X" type="float"/>

@@ -25,7 +25,7 @@
     <geometry id="geo_Lord Riche Hall" name="Lord Riche Hall">
       <mesh>
         <source id="geo_Lord Riche Hall_pos">
-          <float_array id="geo_Lord Riche Hall_pos_arr" count="36">-39.001 116.318 75.716 -36.928 114.507 75.716 -24.120 103.259 75.716 -3.542 85.321 75.716 9.912 100.759 75.716 -25.596 131.711 75.716 -39.001 116.318 87.716 -36.928 114.507 87.716 -24.120 103.259 87.716 -3.542 85.321 87.716 9.912 100.759 87.716 -25.596 131.711 87.716</float_array>
+          <float_array id="geo_Lord Riche Hall_pos_arr" count="36">-39.001 116.318 74.152 -36.928 114.507 74.152 -24.120 103.259 74.152 -3.542 85.321 74.152 9.912 100.759 74.152 -25.596 131.711 74.152 -39.001 116.318 86.152 -36.928 114.507 86.152 -24.120 103.259 86.152 -3.542 85.321 86.152 9.912 100.759 86.152 -25.596 131.711 86.152</float_array>
           <technique_common>
             <accessor source="#geo_Lord Riche Hall_pos_arr" count="12" stride="3">
               <param name="X" type="float"/>

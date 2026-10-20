@@ -10,7 +10,7 @@ Dunmow.
 
 | Feature | Source |
 |---|---|
-| Terrain (48–92 m ASL) | Procedural model tuned to SRTM / Strava spot heights |
+| Terrain (40–77 m ASL in-world) | Environment Agency LiDAR Composite DTM 2 m (OGL) |
 | Stebbing Road (main approach) | Research from OS, Strava segment, satellite |
 | Campus entrance drive | School campus map PDF |
 | Chapel forecourt spur | School campus map PDF |
@@ -20,10 +20,15 @@ Dunmow.
 | Braintree Road (B1008) approach | OSM |
 | Service road (rear of buildings) | Satellite |
 | 4 vehicle spawn points | Campus landmarks |
-| River Chelmer valley (south) | Elevation data |
+| River Chelmer valley (south) | LiDAR DTM |
+
+Terrain is sourced from the **Environment Agency LiDAR Composite Digital
+Terrain Model** (2 m resolution, ±15 cm vertical RMSE, Open Government
+Licence), fetched as GeoTIFF from the Defra Data Services Platform WCS
+endpoint.  The 30 m SRTM model remains as an automatic fallback.
 
 Run `python3 tools/generate.py --online` to replace the static road network with
-live OSM geometry and SRTM elevation data.
+live OSM geometry; add `--lidar` to download fresh LiDAR terrain.
 
 ## Quick start
 
@@ -37,8 +42,11 @@ python3 tools/generate.py
 # Package as BeamNG mod zip
 python3 tools/generate.py --zip
 
-# Fetch real OSM roads + SRTM elevation
-python3 tools/generate.py --online --zip
+# Download Environment Agency LiDAR DTM 2 m terrain (recommended, one-off ~25 MB)
+python3 tools/generate.py --lidar
+
+# Fetch real OSM roads + LiDAR terrain, then package
+python3 tools/generate.py --online --lidar --zip
 ```
 
 Then copy `felsted.zip` to your BeamNG mods folder:
@@ -47,6 +55,28 @@ Then copy `felsted.zip` to your BeamNG mods folder:
 - **Linux**: `~/BeamNG.drive/mods/`
 
 Restart BeamNG and pick **Felsted School** from the Free Roam map list.
+
+## Terrain source priority
+
+`tools/heightmap.py` picks the best available base, with automatic fallback:
+
+| Priority | Source | Resolution | Cache |
+|---|---|---|---|
+| 1 | **EA LiDAR Composite DTM** | 2 m | `data/felsted_lidar_1025.npy` |
+| 2 | SRTM | 30 m | `data/felsted_srtm_32x32.json` |
+| 3 | Live OpenTopoData SRTM | 30 m | — |
+| 4 | Synthetic procedural model | — | — |
+
+LiDAR and SRTM bases are **resampled by latitude/longitude onto the world
+grid** (never stretched), so terrain features line up with OSM geometry.
+On a LiDAR base the synthetic road cuts, campus plateau blend, and large
+fBm noise are all skipped — the real survey already contains every road
+camber, kerb, and the river valley.
+
+`tools/lidar.py` converts WGS84 → OSGB36 (EPSG:27700) with a 7-parameter
+Helmert transform plus the OS polynomial grid series.  The projection
+matches the OS published worked example to 0.3 mm and PROJ to 1 mm
+(≈2 m residual vs OSTN15, the usual Helmert limitation).
 
 ## Terrain fallback
 
@@ -73,7 +103,8 @@ BeamNG version.  Import the 16-bit heightmap manually:
 ```
 tools/
   constants.py        GPS↔world projection, terrain parameters
-  heightmap.py        Procedural + SRTM elevation generation
+  heightmap.py        LiDAR / SRTM / procedural + lat-lon resampling
+  lidar.py            EA LiDAR DTM WCS fetch, GeoTIFF read, OSGB36 transform
   terrain_file.py     Binary .ter writer + PNG heightmap export
   osm_roads.py        OSM Overpass fetch + static fallback road network
   level_builder.py    Assembles main.level.json scene graph
@@ -91,9 +122,16 @@ levels/
 tests/
   test_constants.py   Coordinate projection unit tests
   test_heightmap.py   Elevation generation tests
+  test_lidar.py       LiDAR DTM fetch, OSGB36 transforms, alignment tests
   test_terrain_file.py  .ter binary format tests
   test_osm_roads.py   Road network tests
+  test_osm_parse.py   OSM data parsing tests
   test_level_builder.py  Level JSON assembly tests
+  test_buildings.py   Building object tests
+  test_buildings3d.py  3D building mesh tests
+  test_water.py       Water body tests
+  test_railway.py     Railway tests
+  test_satellite.py   Satellite tile tests
 ```
 
 ## Running tests
@@ -103,12 +141,13 @@ pip install pytest
 python3 -m pytest tests/ -v
 ```
 
-All 73 tests pass.
+All 253 tests pass.
 
 ## Geographic data sources
 
-- **OpenStreetMap** contributors (ODbL) — road geometry
-- **SRTM 30m** (NASA / USGS) — elevation via opentopodata.org
+- **Environment Agency LiDAR Composite DTM 2 m** (Open Government Licence) — terrain
+- **OpenStreetMap** contributors (ODbL) — road geometry, buildings, water
+- **SRTM 30 m** (NASA / USGS) — fallback elevation via opentopodata.org
 - **Felsted School campus map** — building layout reference
 - **Strava** segment #2489774 (Stebbing Road) — elevation profile ground truth
 - **Felsted Parish Plan** (Uttlesford DC, 2014) — landscape context

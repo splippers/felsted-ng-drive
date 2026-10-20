@@ -24,7 +24,10 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from tools.constants import MAP_NAME, MAP_VERSION, SQUARE_SIZE
+from tools.constants import (MAP_NAME, MAP_TITLE, MAP_DESC, MAP_AUTHOR,
+                             MAP_VERSION, MAP_BIOME, MAP_ROADS,
+                             MAP_SUITABLEFOR, MAP_FEATURES, SPAWN_LABELS,
+                             BLOCK_SIZE, SQUARE_SIZE, WORLD_HALF, MAX_TERRAIN_HEIGHT)
 
 log = logging.getLogger(__name__)
 
@@ -63,10 +66,18 @@ def _level_info() -> dict:
 def _terrain_block() -> dict:
     return _obj(
         "TerrainBlock", "Terrain",
-        position            = [0, 0, 0],
+        # position is the south-west corner of the terrain grid in world
+        # space; content is centred on the origin, so the SW corner sits at
+        # (-WORLD_HALF, -WORLD_HALF). BeamNG maps row 0 of the .ter to the
+        # southern edge of this block.
+        position            = [-WORLD_HALF, -WORLD_HALF, 0],
         rotation            = [1, 0, 0, 0],
         scale               = [1, 1, 1],
         squareSize          = SQUARE_SIZE,
+        # .ter heights are encoded against MAX_TERRAIN_HEIGHT; the engine
+        # converts stored height -> metres as stored * (maxHeight / 65536),
+        # so this must match the value used by tools/terrain_file.py.
+        maxHeight           = MAX_TERRAIN_HEIGHT,
         terrainFile         = f"levels/{MAP_NAME}/terrainGrid/{MAP_NAME}.ter",
         baseTexSize         = 512,           # higher for 2 m terrain
         overrideGroundModel = False,
@@ -155,6 +166,52 @@ _SPAWN_POINTS = [
 ]
 
 
+# ── Level metadata (info.json) — BeamNG LevelInfo schema ──────────────────────
+def write_info_json(out_path: Path | str,
+                    level_size: int | None = None) -> Path:
+    """
+    Write levels/<map>/info.json in BeamNG's LevelInfo schema.
+
+    BeamNG reads this to populate the level selector (title, size, biome,
+    spawn points, preview).  Everything comes from tools/constants.py.
+    """
+    out_path  = Path(out_path)
+    level_dir = out_path.parent
+    if level_size is None:
+        level_size = int(BLOCK_SIZE * SQUARE_SIZE)
+
+    spawn_points = []
+    for sp in _SPAWN_POINTS:
+        entry = {"objectname": sp[0]}
+        if sp[0] in SPAWN_LABELS:
+            entry["name"] = SPAWN_LABELS[sp[0]]
+        spawn_points.append(entry)
+
+    info = {
+        "title":       MAP_TITLE,
+        "description": MAP_DESC,
+        "size":        [level_size, level_size],
+        "biome":       MAP_BIOME,
+        "roads":       MAP_ROADS,
+        "suitablefor": MAP_SUITABLEFOR,
+        "features":    MAP_FEATURES,
+        "authors":     MAP_AUTHOR,
+        "version":     MAP_VERSION,
+        "defaultSpawnPointName": spawn_points[0]["objectname"] if spawn_points else "",
+        "spawnPoints":       spawn_points,
+        "supportsTraffic":   True,
+        "supportsTimeOfDay": True,
+        "previews":          ["preview.png"],
+    }
+
+    info_path = level_dir / "info.json"
+    with info_path.open("w", encoding="utf-8") as f:
+        json.dump(info, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+    log.info("Level info written: %s (%d spawns)", info_path, len(spawn_points))
+    return info_path
+
+
 # ── Public API ─────────────────────────────────────────────────────────────────
 
 def build_level(roads:            list[dict],
@@ -163,6 +220,7 @@ def build_level(roads:            list[dict],
                 vegetation:       list[dict] | None = None,
                 building_meshes:  list[dict] | None = None,
                 railway:          list[dict] | None = None,
+                game_elements:    dict | None = None,
                 out_path:         Path | str = None) -> None:
     """
     Write the main.level.json scene graph.
@@ -175,6 +233,9 @@ def build_level(roads:            list[dict],
     vegetation      : objects from vegetation.build_vegetation_objects()
     building_meshes : 3D TSStatic objects from buildings3d.build_building_meshes()
     railway         : historical railway objects from railway.build_railway_objects()
+    game_elements   : {"linear": [...], "objects": [...]} from
+                      game_elements.build_game_elements() — medians/barriers
+                      join the Roads group, points go in a GameElements group
     out_path        : destination file
     """
     if out_path is None:
@@ -183,8 +244,12 @@ def build_level(roads:            list[dict],
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Roads
-    roads_group = _group("Roads", *[_decal_road(r) for r in roads])
+    elements     = game_elements or {}
+    elem_linear  = list(elements.get("linear", []))
+    elem_objects = list(elements.get("objects", []))
+
+    # Roads (real carriageways + derived linear elements like medians)
+    roads_group = _group("Roads", *[_decal_road(r) for r in [*roads, *elem_linear]])
 
     # Buildings — markers/footprints from osm buildings + 3D meshes from buildings3d
     bld_markers:    list[dict] = []
@@ -206,6 +271,9 @@ def build_level(roads:            list[dict],
     # Historical railway
     rail_group = _group("Railway", *(railway or []))
 
+    # Game elements (speed signs, lamps, bridge/tunnel markers)
+    elem_group = _group("GameElements", *elem_objects)
+
     # Spawn
     spawn_group = _group("Spawn",
                           *[_spawn(*s) for s in _SPAWN_POINTS])
@@ -222,19 +290,23 @@ def build_level(roads:            list[dict],
         water_group,
         veg_group,
         rail_group,
+        elem_group,
     )
 
     with out_path.open("w", encoding="utf-8") as f:
         json.dump(mission_group, f, indent=2)
 
-    road_count  = len(roads)
+    # Level-selector metadata (info.json) — always emitted alongside the level
+    write_info_json(out_path)
+
+    road_count  = len(roads) + len(elem_linear)
     bld_count   = len(bld_markers) + len(bld_3d)
     water_count = len(water or [])
     veg_count   = len(vegetation or [])
     rail_count  = len(railway or [])
     log.info(
-        "Level written: %d roads, %d buildings, %d water, %d vegetation, "
-        "%d railway, %d spawns → %s",
-        road_count, bld_count, water_count, veg_count, rail_count,
-        len(_SPAWN_POINTS), out_path,
+        "Level written: %d roads (+%d linear elements), %d buildings, "
+        "%d water, %d vegetation, %d railway, %d game objects, %d spawns → %s",
+        road_count, len(elem_linear), bld_count, water_count, veg_count,
+        rail_count, len(elem_objects), len(_SPAWN_POINTS), out_path,
     )

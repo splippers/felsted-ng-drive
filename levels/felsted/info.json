@@ -1,31 +1,54 @@
 {
-  "name": "Felsted School",
-  "description": "Felsted School campus, Essex, England — a 90-acre independent school founded in 1564. Features Stebbing Road, the chapel approach, campus loop, car parks, and the sports fields. Road geometry from OpenStreetMap; terrain from SRTM data.",
-  "type": "map",
-  "author": "felsted-ng-drive",
-  "version": "0.1.0",
+  "title": "Felsted School",
+  "description": "Felsted School campus, Essex, England — a 90-acre independent school founded in 1564.  2 km × 2 km world at 2 m terrain resolution.  Road geometry, buildings, and water from OpenStreetMap; terrain from Environment Agency LiDAR Composite DTM 2 m (River Chelmer valley 40 m → campus 76 m → surrounding ridge 77 m).",
+  "size": [
+    2048,
+    2048
+  ],
+  "biome": "English Countryside",
+  "roads": "OSM: B1008, Stebbing Road, campus roads, service",
+  "suitablefor": "Free Roam, Point-to-Point",
+  "features": "Environment Agency LiDAR 2 m terrain, OSM game elements (speed limits, bridges), campus buildings, sports fields",
+  "authors": "felsted-ng-drive",
+  "version": "3.1.0",
+  "defaultSpawnPointName": "spawn_main_entrance",
   "spawnPoints": [
     {
-      "name": "Main Entrance (Stebbing Road gate)",
-      "objectname": "spawn_main_entrance"
+      "objectname": "spawn_main_entrance",
+      "name": "Main Entrance (Stebbing Road gate)"
     },
     {
-      "name": "Car Park",
-      "objectname": "spawn_car_park"
+      "objectname": "spawn_car_park",
+      "name": "Car Park"
     },
     {
-      "name": "Campus Centre",
-      "objectname": "spawn_campus_centre"
+      "objectname": "spawn_campus_centre",
+      "name": "Campus Centre"
     },
     {
-      "name": "Sports Fields",
-      "objectname": "spawn_sports_fields"
+      "objectname": "spawn_sports_fields",
+      "name": "Sports Fields"
+    },
+    {
+      "objectname": "spawn_chapel_approach",
+      "name": "Chapel Approach"
+    },
+    {
+      "objectname": "spawn_north_road",
+      "name": "North Road (Stebbing Road)"
+    },
+    {
+      "objectname": "spawn_braintree_east",
+      "name": "Braintree Road — east exit"
+    },
+    {
+      "objectname": "spawn_sports_centre",
+      "name": "Sports Centre"
     }
   ],
+  "supportsTraffic": true,
+  "supportsTimeOfDay": true,
   "previews": [
-    {
-      "title": "Felsted School campus overview",
-      "image": "levels/felsted/preview.png"
-    }
+    "preview.png"
   ]
 }

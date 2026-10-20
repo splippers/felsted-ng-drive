@@ -12,15 +12,34 @@ from pathlib import Path
 # ── Identity ───────────────────────────────────────────────────────────────────
 MAP_NAME    = "felsted"
 MAP_TITLE   = "Felsted School"
-MAP_VERSION = "3.0.0"
+MAP_VERSION = "3.1.0"
 MAP_DESC    = (
     "Felsted School campus, Essex, England — a 90-acre independent school "
     "founded in 1564.  2 km × 2 km world at 2 m terrain resolution.  "
     "Road geometry, buildings, and water from OpenStreetMap; terrain from "
-    "SRTM-30m elevation data (River Chelmer valley 40 m → campus 76 m → "
-    "North Essex hills 84 m)."
+    "Environment Agency LiDAR Composite DTM 2 m (River Chelmer valley "
+    "40 m → campus 76 m → surrounding ridge 77 m)."
 )
 MAP_AUTHOR = "felsted-ng-drive"
+
+# Level-selector metadata (BeamNG LevelInfo schema) — see level_builder.write_info_json
+MAP_BIOME       = "English Countryside"
+MAP_ROADS       = "OSM: B1008, Stebbing Road, campus roads, service"
+MAP_SUITABLEFOR = "Free Roam, Point-to-Point"
+MAP_FEATURES    = ("Environment Agency LiDAR 2 m terrain, OSM game elements "
+                   "(speed limits, bridges), campus buildings, sports fields")
+
+# Human-readable spawn names for the level selector (info.json)
+SPAWN_LABELS = {
+    "spawn_main_entrance":  "Main Entrance (Stebbing Road gate)",
+    "spawn_car_park":       "Car Park",
+    "spawn_campus_centre":  "Campus Centre",
+    "spawn_sports_fields":  "Sports Fields",
+    "spawn_chapel_approach": "Chapel Approach",
+    "spawn_north_road":     "North Road (Stebbing Road)",
+    "spawn_braintree_east": "Braintree Road — east exit",
+    "spawn_sports_centre":  "Sports Centre",
+}
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
 ROOT         = Path(__file__).parent.parent.resolve()
@@ -30,6 +49,11 @@ TERRAIN_DIR  = LEVELS_DIR / "terrainGrid"
 
 OSM_CACHE    = DATA_DIR / "felsted_osm.json"
 SRTM_CACHE   = DATA_DIR / "felsted_srtm_32x32.json"
+
+# Environment Agency LiDAR DTM (see tools/lidar.py)
+LIDAR_DIR        = DATA_DIR / "lidar"
+LIDAR_TIF_CACHE  = LIDAR_DIR / "felsted_dtm_2m.tif"
+LIDAR_GRID_CACHE = DATA_DIR / "felsted_lidar_1025.npy"
 
 # ── GPS anchor ────────────────────────────────────────────────────────────────
 # Centre of main school building façade; map is 2 048 m square around it.
@@ -43,6 +67,10 @@ BBOX = (51.840, 0.410, 51.880, 0.465)
 # ── Projection ────────────────────────────────────────────────────────────────
 _LAT_SCALE = 111_139.0
 _LON_SCALE = 111_139.0 * math.cos(math.radians(CENTER_LAT))  # ≈ 68 620 m/°
+
+# Public aliases (used by heightmap/lidar resampling)
+LAT_SCALE = _LAT_SCALE
+LON_SCALE = _LON_SCALE
 
 
 def gps_to_world(lat: float, lon: float) -> tuple[float, float]:
