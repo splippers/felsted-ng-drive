@@ -1,0 +1,14 @@
+{
+  "version": 9,
+  "datafile": "/levels/felsted/terrainGrid/felsted.ter",
+  "size": 1024,
+  "binaryFormat": "version(char), size(unsigned int), heightMap(heightMapSize * heightMapItemSize), layerMap(layerMapSize * layerMapItemSize), materialNames",
+  "heightMapSize": 1048576,
+  "heightMapItemSize": 2,
+  "layerMapSize": 1048576,
+  "layerMapItemSize": 1,
+  "materials": [
+    "felsted_grass"
+  ],
+  "heightmapImage": "/levels/felsted/terrainGrid/felsted_height.png"
+}

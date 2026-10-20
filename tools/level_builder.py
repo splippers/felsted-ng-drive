@@ -27,7 +27,7 @@ from typing import Any
 from tools.constants import (MAP_NAME, MAP_TITLE, MAP_DESC, MAP_AUTHOR,
                              MAP_VERSION, MAP_BIOME, MAP_ROADS,
                              MAP_SUITABLEFOR, MAP_FEATURES, SPAWN_LABELS,
-                             BLOCK_SIZE, SQUARE_SIZE, WORLD_HALF)
+                             BLOCK_SIZE, SQUARE_SIZE, WORLD_HALF, MAX_TERRAIN_HEIGHT)
 
 log = logging.getLogger(__name__)
 
@@ -74,6 +74,10 @@ def _terrain_block() -> dict:
         rotation            = [1, 0, 0, 0],
         scale               = [1, 1, 1],
         squareSize          = SQUARE_SIZE,
+        # .ter heights are encoded against MAX_TERRAIN_HEIGHT; the engine
+        # converts stored height -> metres as stored * (maxHeight / 65536),
+        # so this must match the value used by tools/terrain_file.py.
+        maxHeight           = MAX_TERRAIN_HEIGHT,
         terrainFile         = f"levels/{MAP_NAME}/terrainGrid/{MAP_NAME}.ter",
         baseTexSize         = 512,           # higher for 2 m terrain
         overrideGroundModel = False,

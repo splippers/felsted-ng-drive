@@ -101,6 +101,13 @@ class TestTerrainBlock:
         t = _by_class(level, "TerrainBlock")[0]
         assert t["position"] == [-WORLD_HALF, -WORLD_HALF, 0]
 
+    def test_max_height_matches_terrain_encoder(self, level):
+        """The engine scales stored heights by maxHeight/65536, so the
+        TerrainBlock must declare the height the .ter was encoded against."""
+        from tools.constants import MAX_TERRAIN_HEIGHT
+        t = _by_class(level, "TerrainBlock")[0]
+        assert t["maxHeight"] == MAX_TERRAIN_HEIGHT
+
     def test_high_base_tex_size(self, level):
         t = _by_class(level, "TerrainBlock")[0]
         assert t["baseTexSize"] >= 256
